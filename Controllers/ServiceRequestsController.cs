@@ -20,17 +20,35 @@ namespace Polly_Web_App.Controllers
         public async Task<IActionResult> Get()
         {
 
-            //Implememt Retry-Policy
-            var retryPolicy = Policy.Handle<Exception>()
-                                    .RetryAsync(5, onRetry: (exception, retryCount) =>
-                                    {
-                                        Console.WriteLine($"Error: {exception.Message} .... Retry Count {retryCount}");
-                                    });
+            #region Retry
+            ////Implememt Retry-Policy
+            //var retryPolicy = Policy.Handle<Exception>()
+            //                        .RetryAsync(5, onRetry: (exception, retryCount) =>
+            //                        {
+            //                            Console.WriteLine($"Error: {exception.Message} .... Retry Count                 {retryCount}");
+            //                        });
 
             //Excecute policy
-            await retryPolicy.ExecuteAsync(ConnectToApi);
+            // await retryPolicy.ExecuteAsync(ConnectToApi); 
+            #endregion
 
-            //await ConnectToApi();
+
+
+            #region Wait-Retry
+            //Implement the Wait Policy
+            var amountToPause = TimeSpan.FromSeconds(15);
+
+            var retryWaitPolicy = Policy.Handle<Exception>()
+                                        .WaitAndRetryAsync(5, i => amountToPause, onRetry: (exception, retryCount) =>
+                                        {
+                                            Console.WriteLine($"Error: {exception.Message} .... Retry Count                 {retryCount}");
+                                        });
+
+            await retryWaitPolicy.ExecuteAsync(ConnectToApi);
+            #endregion
+
+
+
             return Ok();
         }
 
@@ -55,6 +73,7 @@ namespace Polly_Web_App.Controllers
             else
             {
                 Console.WriteLine(response.ErrorMessage);
+                throw new Exception("Not able to connect to the service");
             }
         }
     }
