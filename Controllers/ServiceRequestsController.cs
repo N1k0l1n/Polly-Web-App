@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Polly;
 using RestSharp;
 
 namespace Polly_Web_App.Controllers
@@ -18,13 +19,24 @@ namespace Polly_Web_App.Controllers
         [HttpGet(Name = "GetData")]
         public async Task<IActionResult> Get()
         {
-            ConnectToApi();
+
+            //Implememt Retry-Policy
+            var retryPolicy = Policy.Handle<Exception>()
+                                    .RetryAsync(5, onRetry: (exception, retryCount) =>
+                                    {
+                                        Console.WriteLine($"Error: {exception.Message} .... Retry Count {retryCount}");
+                                    });
+
+            //Excecute policy
+            await retryPolicy.ExecuteAsync(ConnectToApi);
+
+            //await ConnectToApi();
             return Ok();
         }
 
-        private async void ConnectToApi()
+        private async Task ConnectToApi()
         {
-            var url = "https://matchilling-chuck-norris-jokes-v1.p.rapidapi.com/jokes/search?query?%3CREQUIRED%3E";
+            var url = "https://matchilling-chuck-norris-jokes-v1.p.rapidapi.com/jokes/random";
 
             var client = new RestClient();
 
