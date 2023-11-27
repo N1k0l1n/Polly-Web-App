@@ -36,17 +36,39 @@ namespace Polly_Web_App.Controllers
 
             #region Wait-Retry
             //Implement the Wait Policy
-            var amountToPause = TimeSpan.FromSeconds(15);
+            //var amountToPause = TimeSpan.FromSeconds(15);
 
-            var retryWaitPolicy = Policy.Handle<Exception>()
-                                        .WaitAndRetryAsync(5, i => amountToPause, onRetry: (exception, retryCount) =>
-                                        {
-                                            Console.WriteLine($"Error: {exception.Message} .... Retry Count                 {retryCount}");
-                                        });
+            //var retryWaitPolicy = Policy.Handle<Exception>()
+            //                            .WaitAndRetryAsync(5, i => amountToPause, onRetry: (exception, retryCount) =>
+            //                            {
+            //                                Console.WriteLine($"Error: {exception.Message} .... Retry Count                 {retryCount}");
+            //                            });
 
-            await retryWaitPolicy.ExecuteAsync(ConnectToApi);
+            //await retryWaitPolicy.ExecuteAsync(ConnectToApi);
             #endregion
 
+
+            #region Circuit Breaker
+            //Implement  Circuit Breaker
+            var amountToPause = TimeSpan.FromSeconds(15);
+
+            var retryPolicy = Policy.Handle<Exception>()
+                                    .WaitAndRetry(5, i => amountToPause, (exception, retryCount) =>
+                                    {
+                                        Console.WriteLine($"Error: {exception.Message} .... Retry Count                 {retryCount}");
+                                    });
+
+            var circuitBreakerPolicy = Policy.Handle<Exception>()
+                                             .CircuitBreaker(3, TimeSpan.FromSeconds(30));
+
+            //Retry and Circuit Breaker in one Policy
+            var finalPolicy = retryPolicy.Wrap(circuitBreakerPolicy);
+            finalPolicy.Execute(async () =>
+            {
+                Console.WriteLine("Excecuting");
+                await ConnectToApi();
+            });
+            #endregion
 
 
             return Ok();
